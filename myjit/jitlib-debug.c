@@ -106,7 +106,7 @@ typedef struct jit_disasm {
 	char *generic_value_template;
 } jit_disasm;
 
-struct jit_disasm jit_disasm_general = [](){
+struct jit_disasm jit_disasm_general = []()->jit_disasm{
   jit_disasm tmp={0};
 	tmp.indent_template = "    ";   
 	tmp.reg_template = "r%i";
@@ -125,7 +125,7 @@ struct jit_disasm jit_disasm_general = [](){
   return tmp;
 }();
 
-struct jit_disasm jit_disasm_compilable = [](){
+struct jit_disasm jit_disasm_compilable = []()->jit_disasm{
   jit_disasm tmp={0};
 	tmp.indent_template = "    ";   
 	tmp.reg_template = "R(%i)";

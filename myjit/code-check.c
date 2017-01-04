@@ -24,7 +24,7 @@ static inline void jit_prepare_reg_counts(struct jit *jit);
 static inline void jit_prepare_arguments(struct jit *jit);
 void jit_get_reg_name(struct jit_disasm *disasm, char * r, int reg);
 
-static struct jit_disasm jit_debugging_disasm =  [](){
+static struct jit_disasm jit_debugging_disasm =  []()->jit_disasm{
   jit_disasm tmp;
 	tmp.indent_template = "    ",
 	tmp.reg_template = "r%i",
