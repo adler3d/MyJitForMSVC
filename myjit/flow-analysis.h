@@ -98,7 +98,7 @@ static inline void initialize_code_refs(struct code_refs_cache *code_refs, struc
 			code_refs->size++;
 		op = op->next;
 	}
-	code_refs->ops = JIT_MALLOC(sizeof(jit_op *) * code_refs->size);
+	code_refs->ops = (jit_op**)JIT_MALLOC(sizeof(jit_op *) * code_refs->size);
 
 	op = func_info->first_op->next;
 	int i = 0;

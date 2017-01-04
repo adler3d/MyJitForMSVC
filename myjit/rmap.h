@@ -33,7 +33,7 @@ static inline void load_reg(struct jit_op * op, jit_hw_reg * hreg, long reg);
 
 static inline jit_rmap * rmap_init()
 {
-	jit_rmap * res = JIT_MALLOC(sizeof(jit_rmap));
+	jit_rmap * res = (jit_rmap*)JIT_MALLOC(sizeof(jit_rmap));
 	res->map = NULL;
 	return res;
 }
@@ -83,7 +83,7 @@ static void rmap_unassoc(jit_rmap * rmap, jit_value reg)
 
 static jit_rmap * rmap_clone(jit_rmap * rmap)
 {
-	jit_rmap * res = JIT_MALLOC(sizeof(jit_rmap));
+	jit_rmap * res = (jit_rmap*)JIT_MALLOC(sizeof(jit_rmap));
 	res->map = jit_tree_clone(rmap->map);
 	return res;
 }

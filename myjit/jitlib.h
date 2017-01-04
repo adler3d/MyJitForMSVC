@@ -328,6 +328,7 @@ jit_op * jit_add_prolog(struct jit *, void *, struct jit_debug_info *);
 jit_label * jit_get_label(struct jit * jit);
 int jit_allocai(struct jit * jit, int size);
 
+#define __func__ __FUNCSIG__
 
 #define jit_prolog(jit, _func) jit_add_prolog(jit, _func, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #define jit_movr(jit, a, b) jit_add_op(jit, JIT_MOV | REG, SPEC(TREG, REG, NO), a, b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))

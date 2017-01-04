@@ -26,7 +26,7 @@
 
 static inline jit_set * jit_set_new()
 {
-	jit_set * s = JIT_MALLOC(sizeof(jit_set));
+	jit_set * s = (jit_set*)JIT_MALLOC(sizeof(jit_set));
 	s->root = NULL;
 	return s;
 }
@@ -81,7 +81,7 @@ struct copy_target {
 
 static void copy_reg_to_array(jit_tree_key key, jit_tree_value value, void *target)
 {       
-        struct copy_target *t = target;
+        struct copy_target *t = (copy_target *)target;
         t->target[t->index] = key;
         t->index++;
 }  

@@ -25,7 +25,10 @@ static inline int GET_REG_POS(struct jit * jit, int r)
 	if (JIT_REG_SPEC(r) == JIT_RTYPE_REG) {
 		if (JIT_REG_TYPE(r) == JIT_RTYPE_INT) return GET_GPREG_POS(jit, r);
 		else return GET_FPREG_POS(jit, r);
-	} else assert(0); 
+	};
+  QapNoWay();
+  assert(0); 
+  return 0;
 }
 
 #include "x86-common-stuff.c"
@@ -233,27 +236,33 @@ static void emit_fretval_op(struct jit * jit, jit_op * op)
 	x86_movlpd_xreg_membase(jit->ip, op->r_arg[0], X86_ESP, -8);
 }
 
+jit_hw_reg make_jit_hw_reg(int reg,char*name,char callee_saved,char fp,short priority)
+{
+  jit_hw_reg tmp={reg,name,callee_saved,fp,priority};
+  return tmp;
+}
+
 /* register allocator initilization */
 struct jit_reg_allocator * jit_reg_allocator_create()
 {
 	int reg = 0;
-	struct jit_reg_allocator * a = JIT_MALLOC(sizeof(struct jit_reg_allocator));
+	struct jit_reg_allocator * a = (jit_reg_allocator*)JIT_MALLOC(sizeof(struct jit_reg_allocator));
 #ifndef JIT_REGISTER_TEST
 	a->gp_reg_cnt = 6;
 #else
 	a->gp_reg_cnt = 4;
 #endif
-	a->gp_regs = JIT_MALLOC(sizeof(jit_hw_reg) * (a->gp_reg_cnt + 1));
+	a->gp_regs = (jit_hw_reg*)JIT_MALLOC(sizeof(jit_hw_reg) * (a->gp_reg_cnt + 1));
 
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_EAX, "eax", 0, 0, 5 };
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_EBX, "ebx", 1, 0, 0 };
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_ECX, "ecx", 0, 0, 3 };
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_EDX, "edx", 0, 0, 4 };
-#ifndef JIT_REGISTER_TEST
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_ESI, "esi", 1, 0, 1 };
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_EDI, "edi", 1, 0, 2 };
-#endif
-	a->gp_regs[reg++] = (jit_hw_reg) { X86_EBP, "ebp", 0, 0, 100 };
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_EAX, "eax", 0, 0, 5 );
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_EBX, "ebx", 1, 0, 0 );
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_ECX, "ecx", 0, 0, 3 );
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_EDX, "edx", 0, 0, 4 );
+#ifndef JIT_REGISTER_TEST                                   
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_ESI, "esi", 1, 0, 1 );
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_EDI, "edi", 1, 0, 2 );
+#endif                             
+	a->gp_regs[reg++] = make_jit_hw_reg ( X86_EBP, "ebp", 0, 0, 100 );
 	a->gp_arg_reg_cnt = 0;
 
 	a->fp_reg = X86_EBP;
@@ -267,17 +276,17 @@ struct jit_reg_allocator * jit_reg_allocator_create()
 #endif
 
 	reg = 0;
-	a->fp_regs = JIT_MALLOC(sizeof(jit_hw_reg) * a->fp_reg_cnt);
+	a->fp_regs = (jit_hw_reg*)JIT_MALLOC(sizeof(jit_hw_reg) * a->fp_reg_cnt);
 
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM0, "xmm0", 0, 1, 1 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM1, "xmm1", 0, 1, 2 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM2, "xmm2", 0, 1, 3 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM3, "xmm3", 0, 1, 4 };
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM0, "xmm0", 0, 1, 1 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM1, "xmm1", 0, 1, 2 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM2, "xmm2", 0, 1, 3 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM3, "xmm3", 0, 1, 4 );
 #ifndef JIT_REGISTER_TEST
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM4, "xmm4", 0, 1, 5 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM5, "xmm5", 0, 1, 6 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM6, "xmm6", 0, 1, 7 };
-	a->fp_regs[reg++] = (jit_hw_reg) { X86_XMM7, "xmm7", 0, 1, 8 };
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM4, "xmm4", 0, 1, 5 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM5, "xmm5", 0, 1, 6 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM6, "xmm6", 0, 1, 7 );
+	a->fp_regs[reg++] = make_jit_hw_reg ( X86_XMM7, "xmm7", 0, 1, 8 );
 #endif
 
 	a->fp_arg_reg_cnt = 0;

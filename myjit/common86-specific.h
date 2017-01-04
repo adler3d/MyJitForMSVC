@@ -803,7 +803,7 @@ struct transfer_info {
 
 static void emit_transfer_init(struct jit * jit, jit_op * op, jit_value destreg, jit_value srcreg, jit_value cnt, int block_size)
 {
-	struct transfer_info *tinf = JIT_MALLOC(sizeof(struct transfer_info));	
+	struct transfer_info *tinf = (transfer_info*)JIT_MALLOC(sizeof(struct transfer_info));	
 	tinf->sourcereg = srcreg;
 	tinf->destreg = destreg;
 	tinf->block_size = block_size;

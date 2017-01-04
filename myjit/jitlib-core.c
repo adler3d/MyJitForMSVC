@@ -20,8 +20,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <unistd.h>
+//#include <sys/mman.h>
+//#include <unistd.h>
 
 #include "cpu-detect.h"
 #include "jitlib.h"
@@ -69,7 +69,7 @@ struct jit_op * jit_add_fop(struct jit * jit, unsigned short code, unsigned char
 
 struct jit_debug_info *jit_debug_info_new(const char *filename, const char *function, int lineno)
 {
-	struct jit_debug_info *r = JIT_MALLOC(sizeof(struct jit_debug_info));
+	struct jit_debug_info *r = (jit_debug_info *)JIT_MALLOC(sizeof(struct jit_debug_info));
 	r->filename = filename;
 	r->function = function;
 	r->lineno = lineno;
@@ -79,12 +79,13 @@ struct jit_debug_info *jit_debug_info_new(const char *filename, const char *func
 
 struct jit * jit_init()
 {
-	struct jit * r = JIT_MALLOC(sizeof(struct jit));
+	struct jit * r = (jit *)JIT_MALLOC(sizeof(struct jit));
 
 	r->ops = jit_op_new(JIT_CODESTART, SPEC(NO, NO, NO), 0, 0, 0, 0);
 	r->last_op = r->ops;
 	r->optimizations = 0;
 
+  r->buf_ready_to_exec=false;
 	r->buf = NULL;
 	r->labels = NULL;
 	r->reg_al = jit_reg_allocator_create();
@@ -96,7 +97,7 @@ struct jit * jit_init()
 jit_op *jit_add_prolog(struct jit * jit, void * func, struct jit_debug_info *debug_info)
 {
         jit_op * op = jit_add_op(jit, JIT_PROLOG , SPEC(IMM, NO, NO), (long)func, 0, 0, 0, NULL);
-        struct jit_func_info * info = JIT_MALLOC(sizeof(struct jit_func_info));
+        struct jit_func_info * info = (jit_func_info *)JIT_MALLOC(sizeof(struct jit_func_info));
         op->arg[1] = (long)info;
 	op->debug_info = debug_info;
 
@@ -111,7 +112,7 @@ jit_op *jit_add_prolog(struct jit * jit, void * func, struct jit_debug_info *deb
 
 jit_label * jit_get_label(struct jit * jit)
 {
-        jit_label * r = JIT_MALLOC(sizeof(jit_label));
+        jit_label * r = (jit_label *)JIT_MALLOC(sizeof(jit_label));
         jit_add_op(jit, JIT_LABEL, SPEC(IMM, NO, NO), (long)r, 0, 0, 0, NULL);
         r->next = jit->labels;
         jit->labels = r;
@@ -249,7 +250,7 @@ static inline void jit_prepare_reg_counts(struct jit * jit)
 				// stack has to be aligned to 16 bytes
 				while ((info->gp_reg_count + info->fp_reg_count) % 2) info->gp_reg_count ++; 
 #endif
-				info->args = JIT_MALLOC(sizeof(struct jit_inp_arg) * declared_args);
+				info->args = (jit_inp_arg*)JIT_MALLOC(sizeof(struct jit_inp_arg) * declared_args);
 			}
 			if (op) {
 				declared_args = 0;
@@ -318,7 +319,7 @@ static inline void jit_prepare_arguments(struct jit * jit)
 			phys_reg = 0;
 		}
 		if (GET_OP(op) == JIT_DECL_ARG) {
-			info->args[argpos].type = op->arg[0];
+			info->args[argpos].type = (jit_inp_type)op->arg[0];
 			info->args[argpos].size = op->arg[1];
 			if (op->arg[0] == JIT_FLOAT_NUM) {
 				info->args[argpos].gp_pos = gp_arg_pos;
@@ -348,7 +349,7 @@ static inline void jit_buf_expand(struct jit * jit)
 {
 	long pos = jit->ip - jit->buf;
 	jit->buf_capacity *= 2;
-	jit->buf = JIT_REALLOC(jit->buf, jit->buf_capacity);
+	jit->buf = (uchar*)JIT_REALLOC(jit->buf, jit->buf_capacity);
 	jit->ip = jit->buf + pos;
 }
 
@@ -391,7 +392,7 @@ void jit_generate_code(struct jit * jit)
 #endif
 
 	jit->buf_capacity = BUF_SIZE;
-	jit->buf = JIT_MALLOC(jit->buf_capacity);
+	jit->buf = (uchar*)JIT_MALLOC(jit->buf_capacity);
 	jit->ip = jit->buf;
 
 	for (struct jit_op * op = jit->ops; op != NULL; op = op->next) {
@@ -429,14 +430,32 @@ void jit_generate_code(struct jit * jit)
 	/* moves the code to its final destination */
 	int code_size = jit->ip - jit->buf;  
 	void * mem;
-	posix_memalign(&mem, sysconf(_SC_PAGE_SIZE), code_size);
-	mprotect(mem, code_size, PROT_READ | PROT_EXEC | PROT_WRITE);
-	memcpy(mem, jit->buf, code_size);
+	//QapDebugMsg("posix_memalign(&mem, sysconf(_SC_PAGE_SIZE), code_size);");
+	//QapDebugMsg("mprotect(mem, code_size, PROT_READ | PROT_EXEC | PROT_WRITE);");
+  
+  {
+    SYSTEM_INFO system_info;
+    GetSystemInfo(&system_info);
+    auto const page_size = system_info.dwPageSize;
+
+    auto const buffer = VirtualAlloc(nullptr, page_size, MEM_COMMIT, PAGE_READWRITE);
+
+    std::memcpy(buffer, jit->buf, code_size);
+
+    // mark the memory as executable:
+    DWORD dummy;
+    VirtualProtect(buffer, code_size, PAGE_EXECUTE_READWRITE, &dummy);
+
+    //VirtualFree(buffer, 0, MEM_RELEASE);
+    mem=buffer;
+  }
+
+	//memcpy(mem, jit->buf, code_size);
 	JIT_FREE(jit->buf);
 
 	// FIXME: duplicitni vypocet?
 	long pos = jit->ip - jit->buf;
-	jit->buf = mem;
+	jit->buf = (uchar*)mem;
 	jit->ip = jit->buf + pos;
 
 	jit_patch_external_calls(jit);
@@ -447,6 +466,8 @@ void jit_generate_code(struct jit * jit)
 		if (GET_OP(op) == JIT_PROLOG)
 			*(void **)(op->arg[0]) = jit->buf + (long)op->patch_addr;
 	}
+  
+  {DWORD dummy;VirtualProtect(jit->buf,code_size,PAGE_EXECUTE_READ,&dummy);jit->buf_ready_to_exec=true;}
 }
 
 void jit_trace(struct jit *jit, int verbosity)
@@ -509,7 +530,14 @@ void jit_free(struct jit * jit)
 	jit_reg_allocator_free(jit->reg_al);
 	free_ops(jit_op_first(jit->ops));
 	free_labels(jit->labels);
-	if (jit->buf) JIT_FREE(jit->buf);
+	if (jit->buf){
+    if(jit->buf_ready_to_exec){
+      VirtualFree(jit->buf, 0, MEM_RELEASE);
+      jit->buf=nullptr;
+    }else{
+      JIT_FREE(jit->buf);
+    }
+  }
 	JIT_FREE(jit);
 }
 

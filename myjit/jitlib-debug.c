@@ -24,9 +24,9 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+//#include <sys/wait.h>
 
 #define ABS(x)	((x) < 0 ? - (x) : x)
 
@@ -47,6 +47,8 @@ static inline int bufprint(char *buf, const char *format, ...) {
 
 static void compiler_based_debugger(struct jit * jit)
 {
+  QapNoWay();
+  /*
 	char obj_file_name[] = "myjitXXXXXX";
 	int obj_file_fd = mkstemp(obj_file_name);	
 
@@ -84,7 +86,7 @@ static void compiler_based_debugger(struct jit * jit)
 	system(cmd2);
 
 	close(obj_file_fd);
-	unlink(obj_file_name);
+	unlink(obj_file_name);*/
 }
 
 typedef struct jit_disasm {
@@ -104,39 +106,43 @@ typedef struct jit_disasm {
 	char *generic_value_template;
 } jit_disasm;
 
-struct jit_disasm jit_disasm_general = {
-	.indent_template = "    ",   
-	.reg_template = "r%i",
-	.freg_template = "fr%i",
-	.arg_template = "arg%i",
-	.farg_template = "farg%i",
-	.reg_out_template = "out",
-	.reg_fp_template = "fp",
-	.reg_imm_template = "imm",
-	.reg_fimm_template = "fimm",
-	.reg_unknown_template = "(unknown reg.)",
-	.label_template = "L%i",
-	.label_forward_template = "L%i",
-	.generic_addr_template = "<addr: 0x%lx>",
-	.generic_value_template = "0x%lx",
-};
+struct jit_disasm jit_disasm_general = [](){
+  jit_disasm tmp={0};
+	tmp.indent_template = "    ";   
+	tmp.reg_template = "r%i";
+	tmp.freg_template = "fr%i";
+	tmp.arg_template = "arg%i";
+	tmp.farg_template = "farg%i";
+	tmp.reg_out_template = "out";
+	tmp.reg_fp_template = "fp";
+	tmp.reg_imm_template = "imm";
+	tmp.reg_fimm_template = "fimm";
+	tmp.reg_unknown_template = "(unknown reg.)";
+	tmp.label_template = "L%i";
+	tmp.label_forward_template = "L%i";
+	tmp.generic_addr_template = "<addr: 0x%lx>";
+	tmp.generic_value_template = "0x%lx";
+  return tmp;
+}();
 
-struct jit_disasm jit_disasm_compilable = {
-	.indent_template = "    ",   
-	.reg_template = "R(%i)",
-	.freg_template = "FR(%i)",
-	.arg_template = "arg(%i)",
-	.farg_template = "farg(%i)",
-	.reg_fp_template = "R_FP",
-	.reg_out_template = "R_OUT",
-	.reg_imm_template = "R_IMM",
-	.reg_fimm_template = "FR_IMM",
-	.reg_unknown_template = "(unknown reg.)",
-	.label_template = "label_%03i",
-	.label_forward_template = "/* label_%03i */ JIT_FORWARD",
-	.generic_addr_template = "<addr: 0x%lx>",
-	.generic_value_template = "%li",
-};
+struct jit_disasm jit_disasm_compilable = [](){
+  jit_disasm tmp={0};
+	tmp.indent_template = "    ";   
+	tmp.reg_template = "R(%i)";
+	tmp.freg_template = "FR(%i)";
+	tmp.arg_template = "arg(%i)";
+	tmp.farg_template = "farg(%i)";
+	tmp.reg_fp_template = "R_FP";
+	tmp.reg_out_template = "R_OUT";
+	tmp.reg_imm_template = "R_IMM";
+	tmp.reg_fimm_template = "FR_IMM";
+	tmp.reg_unknown_template = "(unknown reg.)";
+	tmp.label_template = "label_%03i";
+	tmp.label_forward_template = "/* label_%03i */ JIT_FORWARD";
+	tmp.generic_addr_template = "<addr: 0x%lx>";
+	tmp.generic_value_template = "%li";
+  return tmp;
+}();
 
 
 
@@ -295,7 +301,7 @@ static void print_rmap_callback(jit_tree_key key, jit_tree_value value, void *di
 static void print_reg_liveness_callback(jit_tree_key key, jit_tree_value value, void *disasm)
 {
 	char buf[256];
-	jit_get_reg_name(disasm, buf, key);
+	jit_get_reg_name((jit_disasm *)disasm, buf, key);
 	printf("%s ", buf);
 }
 
@@ -710,6 +716,7 @@ static inline void print_op_bytes(FILE *f, struct jit *jit, jit_op *op) {
 
 static FILE *open_disasm()
 {
+  /*
 	int fds[2];
 	pipe(fds);
 
@@ -737,7 +744,9 @@ static FILE *open_disasm()
 	// parent
 	close(fds[0]); // read end
 	FILE * f = fdopen(fds[1], "w");
-	return f;
+	return f;*/
+  QapNoWay();
+  return nullptr;
 }
 
 static jit_op *print_combined_op(FILE *f, struct jit *jit, struct jit_op *op, jit_tree *labels)
@@ -795,7 +804,7 @@ static jit_op *print_combined_op(FILE *f, struct jit *jit, struct jit_op *op, ji
 
 
 static void jit_dump_ops_combined(struct jit *jit, jit_tree *labels)
-{
+{/*
 	FILE *f = open_disasm();
 
 	fprintf(f, ".addr=%lx\n", (unsigned long)jit->buf);
@@ -805,7 +814,8 @@ static void jit_dump_ops_combined(struct jit *jit, jit_tree *labels)
 	}
 
 	fclose(f);
-	wait(NULL);
+	wait(NULL);*/
+  QapNoWay();
 }
 
 void jit_dump_ops(struct jit * jit, int verbosity)
@@ -822,7 +832,7 @@ void jit_dump_ops(struct jit * jit, int verbosity)
 }
 
 void jit_trace_op(struct jit *jit, jit_op *op, int verbosity)
-{
+{/*
 	jit_tree * labels = prepare_labels(jit);
 	if (verbosity & JIT_DEBUG_OPS) {
 		print_op(stdout, &jit_disasm_general, op, labels, verbosity);
@@ -836,7 +846,8 @@ void jit_trace_op(struct jit *jit, jit_op *op, int verbosity)
 		wait(NULL);
 	}
 	
-	jit_tree_free(labels);	
+	jit_tree_free(labels);	*/
+  QapNoWay();
 }
 
 #define TRACE_PREV      (1)

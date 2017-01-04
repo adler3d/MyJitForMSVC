@@ -467,7 +467,7 @@ void jit_collect_statistics(struct jit * jit)
 			jit_value reg = regs[i];
 
 			jit_tree * hint = jit_tree_search(new_hints, reg);
-			struct jit_allocator_hint * new_hint = JIT_MALLOC(sizeof(struct jit_allocator_hint));
+			struct jit_allocator_hint * new_hint = (jit_allocator_hint*)JIT_MALLOC(sizeof(struct jit_allocator_hint));
 			if (hint) memcpy(new_hint, hint->value, sizeof(struct jit_allocator_hint));
 			else {
 				new_hint->last_pos = 0;

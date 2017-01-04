@@ -23,8 +23,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <unistd.h>
+//#include <sys/mman.h>
+//#include <unistd.h>
 #include <string.h>
 #include "jitlib.h"
 #include "llrb.c"
@@ -88,6 +88,17 @@ struct jit_allocator_hint {
 	int refs;			// counts number of references to the hint
 };
 
+struct jit_out_arg {// array of arguments
+	union {
+		long generic;
+		double fp;
+	} value;
+	int argpos; // position in the list of GP or FP arguments
+	char isreg; // argument is given by value of the register (if zero, the immediate value is used)
+	char isfp;
+	char size;
+};
+
 typedef struct jit_prepared_args {
 	int count;	// number of arguments to prepare
 	int ready;	// number of arguments that have been prapared
@@ -95,41 +106,34 @@ typedef struct jit_prepared_args {
 	int fp_args;	// number od prepared FP arguments
 	int stack_size; // size of stack occupied by passed arguments
 	jit_op * op;	// corresponding ``PREPARE'' operation
-	struct jit_out_arg {// array of arguments
-		union {
-			long generic;
-			double fp;
-		} value;
-		int argpos; // position in the list of GP or FP arguments
-		char isreg; // argument is given by value of the register (if zero, the immediate value is used)
-		char isfp;
-		char size;
-	} * args;
+  jit_out_arg* args;
 } jit_prepared_args;
 
 typedef struct jit_set {
 	jit_tree * root;
 } jit_set;
 
+struct jit_inp_arg { 
+	enum jit_inp_type type; // type of the argument
+	int size;		// its size
+	char passed_by_reg; 	// indicates whether the argument was passed by register
+	union { 
+		int reg;
+		int stack_pos;
+	} location;		// location of the value
+	int spill_pos;		// location of the argument on the stack, if the value was spilled off
+	int gp_pos;		// position of the argument in the list of GP/FP
+	int fp_pos;		// position of the argument in the list of GP/FP
+	int overflow;		// indicates whether one argument overflow into the adjacent register
+	int phys_reg;		
+};
+
 struct jit_func_info {			// collection of information related to one function
 	int general_arg_cnt;		// number of non-FP arguments
 	int float_arg_cnt;		// number of FP arguments
 	long allocai_mem;		// size of the locally allocated memory
 	int arg_capacity;		// size of the `args' array
-	struct jit_inp_arg { 
-		enum jit_inp_type type; // type of the argument
-		int size;		// its size
-		char passed_by_reg; 	// indicates whether the argument was passed by register
-		union { 
-			int reg;
-			int stack_pos;
-		} location;		// location of the value
-		int spill_pos;		// location of the argument on the stack, if the value was spilled off
-		int gp_pos;		// position of the argument in the list of GP/FP
-		int fp_pos;		// position of the argument in the list of GP/FP
-		int overflow;		// indicates whether one argument overflow into the adjacent register
-		int phys_reg;		
-	} * args;			// collection of all arguments
+  jit_inp_arg* args;			// collection of all arguments
 
 	int gp_reg_count;		// total number of GP registers used in the processed function
 	int fp_reg_count;		// total number of FP registers used in the processed function
@@ -151,6 +155,7 @@ struct jit {
 	jit_prepared_args prepared_args; // list of arguments passed between PREPARE-CALL
 	int push_count;			// number of values pushed on the stack; used by AMD64
 	unsigned int optimizations;
+  bool buf_ready_to_exec;
 };
 
 struct jit_debug_info {
@@ -198,7 +203,7 @@ void jit_allocator_hints_free(jit_tree *);
 
 static struct jit_op * jit_op_new(unsigned short code, unsigned char spec, long arg1, long arg2, long arg3, unsigned char arg_size)
 {
-	struct jit_op * r = JIT_MALLOC(sizeof(struct jit_op));
+	struct jit_op * r = (jit_op *)JIT_MALLOC(sizeof(struct jit_op));
 	r->code = code;
 	r->spec = spec;
 	r->fp = 0;
@@ -296,7 +301,7 @@ static inline struct jit_func_info * jit_current_func_info(struct jit * jit)
 
 static inline void funcall_prepare(struct jit * jit, jit_op * op, int count)
 {
-	jit->prepared_args.args = JIT_MALLOC(sizeof(struct jit_out_arg) * count);
+	jit->prepared_args.args = (struct jit_out_arg*)JIT_MALLOC(sizeof(struct jit_out_arg) * count);
 	jit->prepared_args.count = count;
 	jit->prepared_args.ready = 0;
 	jit->prepared_args.stack_size = 0;

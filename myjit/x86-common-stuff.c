@@ -152,7 +152,9 @@ static int shift_index(int arg)
 	if (arg == 2) return 1;
 	if (arg == 4) return 2;
 	if (arg == 8) return 3;
+  QapNoWay();
 	assert(0);
+  return 0;
 }
 
 static inline int pow2(int arg)

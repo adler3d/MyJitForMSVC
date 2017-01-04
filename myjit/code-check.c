@@ -24,22 +24,24 @@ static inline void jit_prepare_reg_counts(struct jit *jit);
 static inline void jit_prepare_arguments(struct jit *jit);
 void jit_get_reg_name(struct jit_disasm *disasm, char * r, int reg);
 
-static struct jit_disasm jit_debugging_disasm =  {
-	.indent_template = "    ",
-	.reg_template = "r%i",
-	.freg_template = "fr%i",
-	.arg_template = "arg%i",
-	.farg_template = "farg%i",
-	.reg_out_template = "out",
-	.reg_fp_template = "fp",
-	.reg_imm_template = "imm",
-	.reg_fimm_template = "fimm",
-	.reg_unknown_template = "(unknown reg.)",
-	.label_template = "<label>",
-	.label_forward_template = "<label>",
-	.generic_addr_template = "<addr: 0x%lx>",
-	.generic_value_template = "0x%lx",
-};
+static struct jit_disasm jit_debugging_disasm =  [](){
+  jit_disasm tmp;
+	tmp.indent_template = "    ",
+	tmp.reg_template = "r%i",
+	tmp.freg_template = "fr%i",
+	tmp.arg_template = "arg%i",
+	tmp.farg_template = "farg%i",
+	tmp.reg_out_template = "out",
+	tmp.reg_fp_template = "fp",
+	tmp.reg_imm_template = "imm",
+	tmp.reg_fimm_template = "fimm",
+	tmp.reg_unknown_template = "(unknown reg.)",
+	tmp.label_template = "<label>",
+	tmp.label_forward_template = "<label>",
+	tmp.generic_addr_template = "<addr: 0x%lx>",
+	tmp.generic_value_template = "0x%lx";
+  return tmp;
+}();
 
 
 
@@ -126,8 +128,8 @@ static void print_regs(jit_tree_key reg, jit_tree_value v, void *thunk)
 	char buf[32];
 	if (reg == R_FP) return; 
 	jit_get_reg_name(&jit_debugging_disasm, buf, reg);
-	strcat(thunk, " ");
-	strcat(thunk, buf);
+	strcat((char*)thunk, " ");
+	strcat((char*)thunk, buf);
 }
 
 static int check_uninitialized_registers(jit_op *op, char *msg_buf)
